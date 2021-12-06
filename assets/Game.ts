@@ -72,16 +72,23 @@ export default class Game extends cc.Component {
         cc.systemEvent.on(cc.SystemEvent.EventType.KEY_DOWN, this.onKeyDown, this);
 
         if (cc.sys.isMobile) {
-            this.board.on(cc.Node.EventType.TOUCH_START, this.onTouchStart, this);
-            this.board.on(cc.Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
-            this.board.on(cc.Node.EventType.TOUCH_END, this.onTouchEnd, this);
-            this.board.on(cc.Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+            this.node.on(cc.Node.EventType.TOUCH_START, this.onTouchStart, this);
+            this.node.on(cc.Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
+            this.node.on(cc.Node.EventType.TOUCH_END, this.onTouchEnd, this);
+            this.node.on(cc.Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
         }
     }
 
     onDestroy () {
         cc.systemEvent.off(cc.SystemEvent.EventType.KEY_UP, this.onKeyUp, this);
         cc.systemEvent.off(cc.SystemEvent.EventType.KEY_DOWN, this.onKeyDown, this);
+
+        if (cc.sys.isMobile) {
+            this.node.off(cc.Node.EventType.TOUCH_START, this.onTouchStart, this);
+            this.node.off(cc.Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
+            this.node.off(cc.Node.EventType.TOUCH_END, this.onTouchEnd, this);
+            this.node.off(cc.Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+        }
     }
 
     start () {
@@ -98,16 +105,7 @@ export default class Game extends cc.Component {
     onTouchStart (event: cc.Event.EventTouch) {
         let touchLoc = event.touch.getLocation();
         this.touchStartPos = this.board.convertToNodeSpaceAR(touchLoc);
-
-        if (this.item.getBoundingBoxToWorld().contains(touchLoc)) {
-            let prevAngle = this.item.angle;
-
-            this.item.angle += 90;
-            if (this.item.angle >= 360) this.item.angle -= 360;
-
-            if (this.item.x - this.getItemWidth() * this.getItemAnchor().x < -this.board.width/2 || this.item.x + this.getItemWidth() * (1 - this.getItemAnchor().x) > this.board.width/2) this.item.angle = prevAngle;
-            this.skip_touch = true;
-        }
+        cc.log("touchStart");
     }
 
     onTouchMove (event: cc.Event.EventTouch) {
@@ -124,8 +122,8 @@ export default class Game extends cc.Component {
 
         cc.log("angle:" + angleDeg);
 
-        if ((angleDeg >= 0 && angleDeg < 45) || (angleDeg < 0 && angleDeg >= -45) || (angleDeg > 135 && angleDeg <= 180) || (angleDeg < -135 && angleDeg >= -180)) {
-            this.isMoveHors = true;
+        if ((angleDeg >= 0 && angleDeg < 45) || (angleDeg < 0 && angleDeg >= -45) || (angleDeg > 135 && angleDeg <= 180) || (angleDeg < -135 && angleDeg >= -180) && Math.abs(diff.x) > 50) {
+            let prevX = this.item.x;
 
             let sx = prevTouchPos.x + this.board.width/2;
             sx = Math.floor((sx + 25) / 50) * 50;
@@ -135,27 +133,47 @@ export default class Game extends cc.Component {
             px = Math.floor((px + 25) / 50) * 50;
             px -= this.board.width/2;
 
-            let diff = px - sx;
+            let dist = px - sx;
 
-            if (this.item.x + diff >= 25 - this.board.width/2 && this.item.x + diff <= this.board.width/2 - 25) {
-                this.item.x += diff;
+            if ((dist < 0 && this.isAbleToMoveLeft()) || (dist > 0 && this.isAbleToMoveRight())) {
+                this.item.x += dist;
             }
+
+            if (this.item.x != prevX) this.isMoveHors = true;
         }
-        else if (angleDeg < -45 && angleDeg >= -135) {
+        else if (angleDeg < -45 && angleDeg >= -135 && Math.abs(diff.y) > 50) {
             this.isSpeedUp = true;
             this.time_delay = this.curSpeedLevel * 0.25;
+            this.skip_touch = true;
+        }
+        else {
+            this.isMoveHors = false;
+            this.isSpeedUp = false;
         }
     }
 
     onTouchEnd (event: cc.Event.EventTouch) {
         if (this.skip_touch) this.skip_touch = false;
+        cc.log("touch end");
 
         if (this.isMoveHors) {
             this.isMoveHors = false;
+            cc.log("move horizontal");
         }
         else if (this.isSpeedUp) {
             this.isSpeedUp = false;
             this.time_delay = this.curSpeedLevel;
+            cc.log("speed up");
+        }
+        else {
+            let prevAngle = this.item.angle;
+
+            this.item.angle += 90;
+            if (this.item.angle >= 360) this.item.angle -= 360;
+
+            if (this.item.x - this.getItemWidth() * this.getItemAnchor().x < -this.board.width/2 || this.item.x + this.getItemWidth() * (1 - this.getItemAnchor().x) > this.board.width/2) this.item.angle = prevAngle;
+
+            cc.log("diklik cuk!!");
         }
 
     }
