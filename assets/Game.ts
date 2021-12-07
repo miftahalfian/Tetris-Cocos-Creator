@@ -62,6 +62,7 @@ export default class Game extends cc.Component {
 
     private touchStartPos = cc.Vec2.ZERO;
     private isMoveHors = false;
+    private first_move = false;
     private isSpeedUp = false;
     private skip_touch = false;
 
@@ -99,7 +100,7 @@ export default class Game extends cc.Component {
         this.labelBest.string = "Best: " + this.best.toString();
 
         this.generateNext();
-        cc.tween(this).delay(this.time_delay).call(this.showItem.bind(this)).start();
+        cc.tween(this).delay(this.time_delay * 2).call(this.showItem.bind(this)).start();
     }
 
     onTouchStart (event: cc.Event.EventTouch) {
@@ -258,17 +259,25 @@ export default class Game extends cc.Component {
     }
 
     generateNext () {
+        let delayTime = 0;
+        if (this.nextParent.childrenCount > 0) {
+            let n = this.nextParent.children[0];
+            cc.tween(n).to(this.time_delay/4, {scale: 0}, {easing: "backIn"}).removeSelf().start();
+            delayTime = this.time_delay/4;
+        }
+
         this.nextIndex = Math.round(Math.random() * (this.prefabItem.length - 1));
         
         let r = Math.round(Math.random() * 3);
         this.nextAngle = r * 90;
 
-        this.nextParent.removeAllChildren();
         let next = cc.instantiate(this.prefabItem[this.nextIndex]);
         next.angle = this.nextAngle;
-        next.scale = 0.7;
+        next.scale = 0;
         next.setPosition(cc.Vec2.ZERO);
         this.nextParent.addChild(next);
+
+        cc.tween(next).delay(delayTime).to(this.time_delay/4, {scale: 0.7}, {easing: "backOut"}).start();
     }
 
     showItem () {
@@ -277,10 +286,10 @@ export default class Game extends cc.Component {
                 this.best = this.score;
                 this.labelBest.string = "Best: " + this.best.toString();
                 cc.sys.localStorage.setItem("best", this.best.toString());
-
-                this.gameover = true;
-                this.showGameOver();
             }
+
+            this.gameover = true;
+            this.showGameOver();
 
             return;
         }
@@ -453,8 +462,8 @@ export default class Game extends cc.Component {
 
                 cc.tween(this).delay(this.time_delay).call(this.showItem.bind(this)).start();
 
-                if (this.cek_score >= 20) {
-                    this.cek_score -= 20;
+                if (this.cek_score >= 5) {
+                    this.cek_score -= 5;
 
                     this.curSpeedLevel *= 0.8;
                 
